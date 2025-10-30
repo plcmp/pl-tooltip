@@ -12,7 +12,8 @@ export class PlTooltip extends PlPopover {
         text: { type: String },
         target: { type: Object },
         followCursor: { type: Boolean },
-        contentTemplate: { type: Object }
+        contentTemplate: { type: Object },
+        keepHover: { type: Boolean }
     };
 
     static template = html`<div id="outerBox" part="outerBox"><slot></slot></div>`;
@@ -47,7 +48,7 @@ export class PlTooltip extends PlPopover {
         this.topLayer = true;
         super.connectedCallback();
 
-        this.style['pointer-events'] = 'none';
+        if (!this.keepHover) this.style['pointer-events'] = 'none';
 
         if (!this.tooltipTpl) {
             const templateElement = [...this.childNodes].find(n => n.nodeType === document.COMMENT_NODE && n.textContent.startsWith('tpl:'));
@@ -62,10 +63,25 @@ export class PlTooltip extends PlPopover {
     onMouseEnter(event, contexts) {
         const target = event.target;
         const abortController = new AbortController();
-        event.target.addEventListener('mouseleave', () => {
-            this.hide();
-            abortController.abort();
-        }, { signal: abortController.signal, once: true });
+
+        const onLeave = (event) => {
+            const leaveTo = event.toElement || event.relatedTarget;
+
+            if (!this.keepHover || !(leaveTo === this || leaveTo === target)) {
+                this.hide();
+                abortController.abort();
+                target._entered = false;
+            }
+        };
+        const onMouseMove = (event) => {
+            if (this.visible) {
+                if (this.followCursor) {
+                    this.refitToMouseEvent(event);
+                }
+            } else {
+                delayShow(event);
+            }
+        };
 
         /** @type { (event?: MouseEvent) => void } */
         const delayShow = debounce((event) => {
@@ -77,17 +93,14 @@ export class PlTooltip extends PlPopover {
             }
         }, popupDelay);
 
-        event.target.addEventListener('mousemove', (event) => {
-            if (this.visible) {
-                if (this.followCursor) {
-                    this.refitToMouseEvent(event);
-                }
-            } else {
-                delayShow(event);
-            }
-        }, { signal: abortController.signal });
-
-        delayShow();
+        if (!target._entered) {
+            const { signal } = abortController;
+            event.target.addEventListener('mouseleave', onLeave, { signal });
+            this.addEventListener('mouseleave', onLeave, { signal });
+            event.target.addEventListener('mousemove', onMouseMove, { signal });
+            target._entered = true;
+            delayShow();
+        }
     }
 
     refitToMouseEvent(event) {
@@ -104,7 +117,7 @@ export class PlTooltip extends PlPopover {
             this._stampedTemplateInstance = null;
         }
 
-        if (!this._stampedTemplateInstance ) {
+        if (!this._stampedTemplateInstance) {
             const templateInstance = new TemplateInstance(this.tooltipTpl);
             let context = [...this.templateContext, this];
             if (useContext) context = context.concat(...useContext);
