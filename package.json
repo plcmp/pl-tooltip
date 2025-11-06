@@ -1,6 +1,6 @@
 {
     "name": "@plcmp/pl-tooltip",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Tooltip component",
     "main": "pl-tooltip.js",
     "repository": {

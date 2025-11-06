@@ -39,9 +39,10 @@ export class PlTooltip extends PlPopover {
         }
     `;
 
-    constructor(tooltipTpl) {
+    constructor(tooltipTpl, templateCtx) {
         super();
         this.tooltipTpl = tooltipTpl;
+        if (templateCtx) this.templateContext = templateCtx;
     }
 
     connectedCallback() {
@@ -135,8 +136,8 @@ export class PlTooltip extends PlPopover {
     }
 }
 
-export function createTooltip(tooltipTpl) {
-    return new PlTooltip(tooltipTpl);
+export function createTooltip(tooltipTpl, useContext) {
+    return new PlTooltip(tooltipTpl, useContext);
 }
 
 customElements.define('pl-tooltip', PlTooltip);
